@@ -2,10 +2,12 @@
 import os.path
 import logging
 import re
+import io
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 
 # Configure logging to INFO level by default
@@ -92,6 +94,49 @@ def get_files_in_folder(service, folder_id):
             
     return files
 
+
+def download_docx_from_drive(service, file_name):
+    """
+        Searches for a specific file by name and downloads/exports it locally.
+    """
+    query = f"name='{file_name}' and trashed = false"
+    results = service.files().list(q=query, fields="files(id, name, mimeType)").execute()
+    items = results.get('files', [])
+
+    if not items:
+        logging.error(f"===== File '{file_name}' not found in Drive. =====")
+        return None
+
+    file_id = items[0]['id']
+    mime_type = items[0]['mimeType']
+    logging.info(f"===== Downloading {file_name} from Google Drive... =====")
+    
+    if 'application/vnd.google-apps.document' in mime_type:
+        logging.info("===== Google Doc detected. Exporting to .docx format... =====")
+        request = service.files().export_media(
+            fileId = file_id, 
+            mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+    else:
+        logging.info("===== Standard file detected. Downloading directly... =====")
+        request = service.files().get_media(fileId=file_id)
+        
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+    
+    done = False
+    while done is False:
+        status, done = downloader.next_chunk()
+
+    # Ensure the local file ends with .docx so python-docx can parse it
+    local_path = f"temp_{file_name}"
+    if not local_path.endswith('.docx'):
+         local_path += '.docx'
+         
+    with open(local_path, 'wb') as f:
+        f.write(fh.getvalue())
+        
+    return local_path
 
 if __name__ == '__main__':
     logging.info("===== Starting Data Ingestion Phase... =====")
