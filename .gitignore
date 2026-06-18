@@ -1,6 +1,5 @@
 venv/
-Agent Data.docx
-Agent Details.docx
 credentials.json
-Open-Meteo API (JSON Responses).json
 token.json
+.env
+__pycache__/
