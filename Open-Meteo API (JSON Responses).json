@@ -1,0 +1,35 @@
+{
+  "location": "User_City_Coordinates",
+  "historical_weather": [
+    {
+      "date": "2026-04-02",
+      "temperature_max_c": 14.2,
+      "weather_code": 61,
+      "condition": "Rain"
+    },
+    {
+      "date": "2026-04-05",
+      "temperature_max_c": 22.5,
+      "weather_code": 0,
+      "condition": "Clear Sky"
+    },
+    {
+      "date": "2026-04-12",
+      "temperature_max_c": 11.8,
+      "weather_code": 63,
+      "condition": "Rain"
+    },
+    {
+      "date": "2026-04-18",
+      "temperature_max_c": 13.0,
+      "weather_code": 65,
+      "condition": "Rain"
+    },
+    {
+      "date": "2026-04-25",
+      "temperature_max_c": 12.1,
+      "weather_code": 61,
+      "condition": "Rain"
+    }
+  ]
+}
