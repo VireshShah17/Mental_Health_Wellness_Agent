@@ -8,6 +8,7 @@ from pydantic import SecretStr
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from drive_auth import authenticate_google_drive, download_docx_from_drive
+from weather_checker import get_weather_for_date
 
 
 # Configure logging to INFO level by default
@@ -72,34 +73,40 @@ def parse_docx_diaries(file_path):
     return entries
 
 
-def run_sentiment_analysis(entries):
+def run_analysis_pipeline(entries, weather_file_path):
     """
-        Processes each extracted entry through the Groq LLM for sentiment classification.
+        Processes entries through the Groq LLM AND checks the weather.
     """
     analyzed_results = []
 
     for entry in entries:
         date = entry["date"]
-        content = entry["text"]
+        logging.info(f"===== Analyzing sentiment and weather for {date}... =====")
 
-        logging.info(f"===== Analyzing sentiment for entry on {date}... =====")
         try:
-            response = sentiment_chain.invoke({'diary_text': content})
+            # Get the sentiment
+            response = sentiment_chain.invoke({"diary_text": entry['text']})
             sentiment = response.content.strip() # type: ignore
 
+            # Get the weather
+            weather_condition = get_weather_for_date(date, weather_file_path)
+
+            # Combine Data
             analyzed_results.append({
                 "date": date,
-                "sentiment": sentiment
+                "sentiment": sentiment,
+                "weather": weather_condition
             })
-            logging.info(f"===== Result -> Date: {date} | Sentiment: {sentiment} =====")
+
         except Exception as e:
-            logging.error(f"===== Failed to analyze sentiment for {date}: {e} =====")
+            logging.error(f"===== Analysis failed for {date}: {e} =====")
             
     return analyzed_results
 
 
 if __name__ == '__main__':
     TARGET_FILE = 'Agent Data'
+    WEATHER_FILE = 'Open-Meteo API (JSON Responses).json'
     
     # 1. Authenticate and Download (using drive_auth.py)
     service = authenticate_google_drive()
@@ -113,11 +120,11 @@ if __name__ == '__main__':
         if diary_entries:
             # 3. Analyze Sentiment
             logging.info(f"===== Running Groq analysis on {len(diary_entries)} entries... =====")
-            final_results = run_sentiment_analysis(diary_entries)
+            final_results = run_analysis_pipeline(diary_entries, WEATHER_FILE)
             
             logging.info("--- FINAL SENTIMENT DATA ---")
             for res in final_results:
-                print(f"- {res['date']}: {res['sentiment']}")
+                print(f"- {res['date']} | Sentiment: {res['sentiment']} | Weather: {res['weather']}")
                 
         # 4. Clean up the temporary file from your Ubuntu system
         os.remove(local_file_path)
