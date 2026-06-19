@@ -104,6 +104,45 @@ def run_analysis_pipeline(entries, weather_file_path):
     return analyzed_results
 
 
+def generate_wellness_insights(analyzed_data):  
+    """
+        Evaluates the combined data to find hidden mental health triggers.
+        Logic: IF sentiment == Negative AND weather == Rain > 3 times a month, generate an alert.
+    """
+    logging.info("===== Wellness Insight Generator... =====")
+
+    # Dictionary to track counts per month (format: 'YYYY-MM': count)
+    rainy_blues_tracker = {}
+
+    for entry in analyzed_data:
+        date = entry['date']
+        sentiment = entry['sentiment']
+        weather = entry['weather']
+        
+        # Extract the month (YYYY-MM) from YYYY-MM-DD
+        month = date[:7]
+
+        if month not in rainy_blues_tracker:
+            rainy_blues_tracker[month] = 0
+            
+        # The Core Agent Logic
+        if sentiment == "Negative" and weather == "Rain":
+            rainy_blues_tracker[month] += 1
+        
+    # Check thresholds and trigger alerts
+    alerts_generated = False
+    for month, count in rainy_blues_tracker.items():
+        if count > 3:
+            alerts_generated = True
+            print("\n" + "="*50)
+            print(f"🚨 WELLNESS ALERT (Month: {month}) 🚨")
+            print(f"Trigger condition met: Negative mood during Rain happened {count} times.")
+            print("Message: I noticed you feel down when it rains. Suggestion: Buy a sun-lamp or plan an indoor movie night for the next rainy day.")
+            print("="*50 + "\n")
+            
+    if not alerts_generated:
+        logging.info("===== No critical weather-mood triggers found this month. =====")
+
 if __name__ == '__main__':
     TARGET_FILE = 'Agent Data'
     WEATHER_FILE = 'Open-Meteo API (JSON Responses).json'
@@ -125,6 +164,9 @@ if __name__ == '__main__':
             logging.info("--- FINAL SENTIMENT DATA ---")
             for res in final_results:
                 print(f"- {res['date']} | Sentiment: {res['sentiment']} | Weather: {res['weather']}")
+            
+            # Run well-ness insights
+            generate_wellness_insights(final_results)
                 
         # 4. Clean up the temporary file from your Ubuntu system
         os.remove(local_file_path)
