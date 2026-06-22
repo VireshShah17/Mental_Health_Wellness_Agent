@@ -3,43 +3,13 @@ import logging
 import re
 import docx
 import os
-from dotenv import load_dotenv
-from pydantic import SecretStr
-from langchain_groq import ChatGroq
-from langchain_core.prompts import PromptTemplate
 from drive_auth import authenticate_google_drive, download_docx_from_drive
 from weather_checker import get_weather_for_date
+from agent_core import analyze_sentiment
 
 
-# Configure logging to INFO level by default
-logging.basicConfig(level = logging.INFO, format = '%(asctime)s - %(levelname)s - %(message)s',
-    datefmt = '%Y-%m-%d %H:%M:%S')
-
-# Fetch and validate the Groq API key
-load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY is not set in the environment variables.")
-
-# Initialize the Groq client with the API key and desired model parameters
-llm = ChatGroq(api_key = SecretStr(GROQ_API_KEY), model = "llama-3.1-8b-instant", temperature = 0)
-
-# LangChain Prompt to enforce strict "Positive" or "Negative" output
-sentiment_prompt = PromptTemplate(
-    input_variables = ["diary_text"],
-    template = """
-            You are a digital therapist analyzing a diary entry.
-            Read the following text and determine if the overall sentiment is Positive or Negative.
-            Respond with ONLY the word "Positive" or "Negative". Do not include any other text.
-            
-            Diary Entry:
-            {diary_text}
-            
-            Sentiment:
-    """
-)
-
-sentiment_chain = sentiment_prompt | llm
+# Configure logging
+logging.basicConfig(level = logging.INFO, format = '%(asctime)s - %(levelname)s - %(message)s')
 
 
 def parse_docx_diaries(file_path):
@@ -85,8 +55,7 @@ def run_analysis_pipeline(entries, weather_file_path):
 
         try:
             # Get the sentiment
-            response = sentiment_chain.invoke({"diary_text": entry['text']})
-            sentiment = response.content.strip() # type: ignore
+            sentiment = analyze_sentiment(entry['text'])
 
             # Get the weather
             weather_condition = get_weather_for_date(date, weather_file_path)
